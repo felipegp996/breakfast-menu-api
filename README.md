@@ -9,6 +9,8 @@ Express and MongoDB API for the breakfast menu.
 3. Run `npm install`, then `npm run dev`.
 4. In another terminal, run `npm run seed:admin` and `npm run seed:user` once each.
 
+`UI_ORIGIN` is required and must exactly match the browser origin allowed to call the API. For Vercel, set it to `https://breakfast-menu-ui.vercel.app` in the API project's environment variables and redeploy.
+
 The API waits for all three connections before listening. `Ingredient.quantityOnHand` is the canonical pantry inventory. `BreakfastRequest` and ingredient deductions share a transaction on the ingredients cluster. `DailyStock` is a derived per-date recipe-availability projection stored in the recipes cluster's `daily-stock` collection; it is refreshed after orders and on menu/availability reads. Cross-cluster references are resolved by API queries, not automatic Mongoose population.
 
 ## Admin catalog routes

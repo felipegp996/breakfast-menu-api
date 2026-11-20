@@ -7,10 +7,25 @@ export const dbConnections = {
   users: mongoose.createConnection(),
 };
 
-export async function connectToDatabase() {
-  await Promise.all([
-    dbConnections.ingredients.openUri(env.MONGODB_INGREDIENTS_URI),
-    dbConnections.recipes.openUri(env.MONGODB_RECIPES_URI),
-    dbConnections.users.openUri(env.MONGODB_USERS_URI),
-  ]);
+let connectionPromise: Promise<void> | undefined;
+
+export function connectToDatabase(): Promise<void> {
+  if (!connectionPromise) {
+    connectionPromise = Promise.all([
+      connect(dbConnections.ingredients, env.MONGODB_INGREDIENTS_URI),
+      connect(dbConnections.recipes, env.MONGODB_RECIPES_URI),
+      connect(dbConnections.users, env.MONGODB_USERS_URI),
+    ]).then(() => undefined).catch((error: unknown) => {
+      connectionPromise = undefined;
+      throw error;
+    });
+  }
+
+  return connectionPromise;
+}
+
+function connect(connection: mongoose.Connection, uri: string) {
+  if (connection.readyState === 1) return Promise.resolve();
+  if (connection.readyState === 2) return connection.asPromise().then(() => undefined);
+  return connection.openUri(uri).then(() => undefined);
 }
