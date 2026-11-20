@@ -5,6 +5,7 @@ import authRouter from "./routes/auth";
 import ingredientAdminRouter from "./routes/admin-ingredients";
 import recipeAdminRouter from "./routes/admin-recipes";
 import dailyStockAdminRouter from "./routes/admin-daily-stock";
+import notificationAdminRouter from "./routes/admin-notifications";
 import menuRouter from "./routes/menu";
 import requestRouter from "./routes/requests";
 import { connectToDatabase } from "./config/database";
@@ -32,6 +33,7 @@ app.use("/api/auth", authRouter);
 app.use("/api/admin/ingredients", ingredientAdminRouter);
 app.use("/api/admin/recipes", recipeAdminRouter);
 app.use("/api/admin/daily-stock", dailyStockAdminRouter);
+app.use("/api/admin/notifications", notificationAdminRouter);
 app.use("/api/menu", menuRouter);
 app.use("/api/requests", requestRouter);
 

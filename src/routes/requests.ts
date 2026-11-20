@@ -1,12 +1,14 @@
 import { Router } from "express";
-import { Types } from "mongoose";
+import { Types, type HydratedDocument } from "mongoose";
 import { z } from "zod";
 import { authenticate } from "../middleware/authenticate";
 import { dbConnections } from "../config/database";
 import { env } from "../config/env";
-import { BreakfastRequest, type RequestIngredientSnapshot } from "../models/breakfast-request";
+import { BreakfastRequest, type BreakfastRequestDocument, type RequestIngredientSnapshot } from "../models/breakfast-request";
 import { Ingredient } from "../models/ingredient";
+import { Notification } from "../models/notification";
 import { Recipe } from "../models/recipe";
+import { User } from "../models/user";
 import { refreshDailyStock } from "../services/daily-stock";
 
 const router = Router();
@@ -56,7 +58,7 @@ router.post("/", authenticate, async (request, response, next) => {
     };
     const serviceDate = getServiceDate(env.APP_TIMEZONE);
     const session = await dbConnections.ingredients.startSession();
-    let updatedRequest = null;
+    const updatedRequest: { current: HydratedDocument<BreakfastRequestDocument> | null } = { current: null };
 
     try {
       await session.withTransaction(async () => {
@@ -80,7 +82,7 @@ router.post("/", authenticate, async (request, response, next) => {
         }
 
         await applyInventoryDeltas(deltas, session);
-        updatedRequest = await BreakfastRequest.findOneAndUpdate(
+        updatedRequest.current = await BreakfastRequest.findOneAndUpdate(
           { userId: request.auth!.userId, serviceDate },
           {
             $set: {
@@ -96,9 +98,39 @@ router.post("/", authenticate, async (request, response, next) => {
       await session.endSession();
     }
 
+    if (updatedRequest.current) {
+      try {
+        const orderUser = await User.findById(request.auth!.userId)
+          .select("name email")
+          .lean<{ _id: Types.ObjectId; name: string; email: string }>();
+        if (orderUser) {
+          await Notification.create({
+            userId: orderUser._id,
+            userName: orderUser.name,
+            userEmail: orderUser.email,
+            order: {
+              requestId: updatedRequest.current._id,
+              serviceDate: updatedRequest.current.serviceDate,
+              recipe: {
+                name: updatedRequest.current.recipeSnapshot.name,
+                description: updatedRequest.current.recipeSnapshot.description,
+                imageUrl: updatedRequest.current.recipeSnapshot.imageUrl,
+                ingredients: updatedRequest.current.recipeSnapshot.ingredients.map(({ name, quantity, unit }) => ({ name, quantity, unit })),
+              },
+            },
+            orderedAt: new Date(),
+          });
+        } else {
+          console.error(`Could not create an order notification: user ${request.auth!.userId} was not found.`);
+        }
+      } catch (notificationError) {
+        console.error("The order was saved, but its notification could not be created.", notificationError);
+      }
+    }
+
     await refreshDailyStockSafely(serviceDate);
 
-    response.status(200).json(updatedRequest);
+    response.status(200).json(updatedRequest.current);
   } catch (error) {
     if (error instanceof StockUnavailableError) {
       response.status(409).json({ error: "There are not enough ingredients left for that recipe." });

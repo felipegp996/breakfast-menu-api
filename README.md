@@ -26,6 +26,9 @@ All catalog routes require a JWT for a user with the `admin` role. Ingredient an
 - `POST /api/admin/recipes`
 - `PUT /api/admin/recipes/:id`
 - `DELETE /api/admin/recipes/:id`
+- `GET /api/admin/notifications?page=1` returns order notifications newest-first, 10 per page.
+
+Successful order placements create a notification in the users cluster's `notifications` collection, including the customer, order snapshot, and order time.
 
 ## Daily stock
 
