@@ -8,7 +8,7 @@ const envSchema = z.object({
   MONGODB_INGREDIENTS_URI: z.string().min(1),
   MONGODB_RECIPES_URI: z.string().min(1),
   JWT_SECRET: z.string().min(32),
-  UI_ORIGIN: z.string().url().default("http://localhost:3000"),
+  UI_ORIGIN: z.string().url(),
   APP_TIMEZONE: z.string().default("UTC"),
   ADMIN_NAME: z.string().optional(),
   ADMIN_EMAIL: z.string().email().optional(),
